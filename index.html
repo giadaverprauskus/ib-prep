@@ -204,19 +204,39 @@
   .context-card .cl{font-size:10.5px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;color:var(--ink-soft);margin-bottom:6px}
   .context-card p{margin:0;font-size:13.5px;line-height:1.62;color:var(--ink-soft)}
   .learnmore{margin-top:13px;font-size:13px;color:var(--brand);background:none;border:none;text-decoration:underline;text-underline-offset:2px;padding:0}
-  .article{font-size:15.5px;line-height:1.72;color:var(--ink-soft)}
-  .article h3{font-size:18px;color:var(--ink);margin:1.7rem 0 .6rem;font-weight:600;letter-spacing:-.2px}
+  .lesson-card{padding:32px 40px 30px}
+  .lesson-meta{display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted);padding-bottom:20px;margin-bottom:26px;border-bottom:1px solid var(--line)}
+  .lesson-meta span{display:inline-flex;align-items:center;gap:7px}
+  .lesson-meta svg{width:15px;height:15px;stroke:currentColor;stroke-width:1.8;fill:none}
+  .article{font-size:15.5px;line-height:1.75;color:var(--ink-soft)}
+  .article > .lead{font-size:17.5px;line-height:1.6;color:var(--ink);margin:0 0 1.5rem}
+  .article h3{font-size:19px;color:var(--ink);margin:2rem 0 .7rem;font-weight:600;letter-spacing:-.3px;display:flex;align-items:center;gap:10px}
+  .article h3::before{content:"";flex:none;width:4px;height:19px;border-radius:2px;background:var(--brand)}
   .article h3:first-child{margin-top:0}
-  .article h4{font-size:15px;color:var(--ink);margin:1.3rem 0 .4rem;font-weight:600}
-  .article p{margin:0 0 1rem}
-  .article ul,.article ol{margin:0 0 1rem;padding-left:1.3rem}
-  .article li{margin:0 0 .45rem}
+  .article h3.ex-h{color:var(--brand-deep)}
+  .article h3.ex-h::before{background:var(--gold)}
+  .article h4{font-size:15.5px;color:var(--ink);margin:1.4rem 0 .4rem;font-weight:600}
+  .article p{margin:0 0 1.05rem}
+  .article ul,.article ol{margin:0 0 1.1rem;padding-left:1.3rem}
+  .article li{margin:0 0 .5rem;padding-left:.15rem}
+  .article li::marker{color:var(--brand)}
   .article strong{color:var(--ink);font-weight:600}
-  .article code{font-family:var(--mono);font-size:13px;background:var(--card-2);padding:1px 6px;border-radius:5px;color:var(--ink)}
-  .article .callout{background:var(--brand-tint);border-radius:12px;padding:14px 16px;margin:0 0 1.1rem;color:var(--brand-deep);font-size:14.5px;line-height:1.6}
+  .article code{font-family:var(--mono);font-size:13px;background:var(--card-2);border:1px solid var(--line);padding:1px 6px;border-radius:6px;color:var(--ink);white-space:nowrap}
+  .article .callout{display:flex;gap:12px;align-items:flex-start;background:var(--brand-tint);border-radius:14px;padding:15px 18px;margin:1.3rem 0;font-size:14.5px;line-height:1.62}
+  .article .callout .co-ic{flex:none;color:var(--brand);margin-top:1px}
+  .article .callout .co-ic svg{width:19px;height:19px;stroke:currentColor;stroke-width:1.7;fill:none}
+  .article .callout .co-body{color:var(--brand-deep)}
   .article .callout strong{color:var(--brand-deep)}
-  .article .callout code{background:color-mix(in srgb,var(--brand-deep) 12%,transparent)}
-  .learn-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:1.6rem;padding-top:1.3rem;border-top:1px solid var(--line)}
+  .article .callout code{background:transparent;border-color:color-mix(in srgb,var(--brand-deep) 22%,transparent)}
+  .article .takeaways{background:var(--card-2);border-radius:16px;padding:20px 22px;margin:2rem 0 .5rem}
+  .article .takeaways .tk-h{display:flex;align-items:center;gap:9px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;color:var(--ink);margin-bottom:13px}
+  .article .takeaways .tk-h svg{width:18px;height:18px;stroke:var(--brand);stroke-width:2;fill:none}
+  .article .takeaways ul{margin:0;padding:0;list-style:none}
+  .article .takeaways li{position:relative;padding-left:26px;margin-bottom:9px;color:var(--ink-soft);font-size:14.5px;line-height:1.55}
+  .article .takeaways li::before{content:"";position:absolute;left:3px;top:8px;width:8px;height:8px;border-radius:50%;background:var(--brand)}
+  .article .takeaways li:last-child{margin-bottom:0}
+  .learn-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:1.8rem;padding-top:1.4rem;border-top:1px solid var(--line)}
+  @media (max-width:600px){.lesson-card{padding:22px 20px}.article > .lead{font-size:16px}.article h3{font-size:17px}}
 
   /* reveal (behavioral) */
   .reveal-ans{margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
@@ -468,7 +488,7 @@ function md(src){
     if(/^###\s/.test(ln)){h+='<h4>'+inl(ln.replace(/^###\s/,''))+'</h4>';i++;continue;}
     if(/^##\s/.test(ln)){h+='<h3>'+inl(ln.replace(/^##\s/,''))+'</h3>';i++;continue;}
     if(/^#\s/.test(ln)){h+='<h3>'+inl(ln.replace(/^#\s/,''))+'</h3>';i++;continue;}
-    if(/^>\s/.test(ln)){let b=[];while(i<L.length&&/^>\s?/.test(L[i])){b.push(L[i].replace(/^>\s?/,''));i++;}h+='<div class="callout">'+b.map(inl).join(' ')+'</div>';continue;}
+    if(/^>\s/.test(ln)){let b=[];while(i<L.length&&/^>\s?/.test(L[i])){b.push(L[i].replace(/^>\s?/,''));i++;}h+='<div class="callout"><span class="co-ic"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 2a6 6 0 0 0-3.8 10.6c.5.4.8 1 .8 1.7V15h6v-.7c0-.7.3-1.3.8-1.7A6 6 0 0 0 12 2z"/></svg></span><div class="co-body">'+b.map(inl).join(' ')+'</div></div>';continue;}
     if(/^\s*[-*]\s/.test(ln)){let b=[];while(i<L.length&&/^\s*[-*]\s/.test(L[i])){b.push(L[i].replace(/^\s*[-*]\s/,''));i++;}h+='<ul>'+b.map(x=>'<li>'+inl(x)+'</li>').join('')+'</ul>';continue;}
     if(/^\s*\d+\.\s/.test(ln)){let b=[];while(i<L.length&&/^\s*\d+\.\s/.test(L[i])){b.push(L[i].replace(/^\s*\d+\.\s/,''));i++;}h+='<ol>'+b.map(x=>'<li>'+inl(x)+'</li>').join('')+'</ol>';continue;}
     let b=[ln];i++;
@@ -486,13 +506,27 @@ function open_lesson(id){
   document.getElementById('st-title').textContent=LMETA[id].title;
   document.getElementById('setrow').style.display='none';
   const s=mod_stats(id);
-  document.getElementById('q-area').innerHTML=`<div class="qcard">
-    <div class="article">${md(ARTICLES[id])}</div>
+  const words=String(ARTICLES[id]).split(/\s+/).length, mins=Math.max(1,Math.round(words/200));
+  const tq=get_test('quiz:'+id);
+  document.getElementById('q-area').innerHTML=`<div class="qcard lesson-card">
+    <div class="lesson-meta">
+      <span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg> ${mins} min read</span>
+      <span><svg viewBox="0 0 24 24"><path d="M9 5h11M9 12h11M9 19h11"/><circle cx="4" cy="5" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="19" r="1"/></svg> ${s.count} practice questions</span>
+      <span><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg> ${tq&&tq.passed?`quiz passed · ${tq.best}%`:'graded quiz'}</span>
+    </div>
+    <div class="article">${dress_article(md(ARTICLES[id]))}</div>
     <div class="learn-cta">
       <button class="btn primary" onclick="open_module('${id}')">Practice these questions <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
       <button class="btn" onclick="start_lesson_quiz('${id}')"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg> Take the quiz</button>
     </div></div>`;
   show_view('study');window.scrollTo(0,0);
+}
+function dress_article(html){
+  html=html.replace(/<p>/,'<p class="lead">');
+  html=html.replace(/<h3>([^<]*[Kk]ey [Tt]akeaways[^<]*)<\/h3>\s*(<ul>[\s\S]*?<\/ul>)/,
+    '<div class="takeaways"><div class="tk-h"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Key takeaways</div>$2</div>');
+  html=html.replace(/<h3>([^<]*\b([Ee]xample|[Ww]orked)\b[^<]*)<\/h3>/g,'<h3 class="ex-h">$1</h3>');
+  return html;
 }
 
 /* ---------- practice engine ---------- */
