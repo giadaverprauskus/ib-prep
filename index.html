@@ -111,6 +111,33 @@
   .lchip.cont{background:var(--brand-tint);color:var(--brand-deep)}
   .lchip.rev{background:var(--gold-tint);color:var(--gold)}
   .lchip.mast{background:var(--brand-tint);color:var(--brand-deep)}
+  .lesson{cursor:pointer}
+  .quizbtn{font-size:10.5px;font-weight:600;padding:5px 10px;border-radius:20px;white-space:nowrap;flex:none;border:1px solid var(--line);background:var(--card);color:var(--muted);display:inline-flex;align-items:center;gap:5px;transition:.14s}
+  .quizbtn:hover{border-color:var(--gold);color:var(--gold)}
+  .quizbtn.passed{background:var(--gold-tint);border-color:var(--gold-tint);color:var(--gold)}
+  .quizbtn svg{width:12px;height:12px;stroke:currentColor;stroke-width:2.6;fill:none}
+  .lesson.unittest{border-style:dashed;background:transparent}
+  .lesson.unittest:hover{border-color:var(--gold)}
+  .lesson.unittest .node{background:var(--gold-tint);border-color:var(--gold)}
+  .lesson.unittest .node svg{width:10px;height:10px;stroke:var(--gold);stroke-width:2.4;fill:none;display:block}
+  .lesson.unittest.passed{border-style:solid;border-color:var(--gold)}
+  .lesson.unittest.passed .node{background:var(--gold);border-color:var(--gold)}
+  .lesson.unittest.passed .node svg{stroke:#fff}
+  .lchip.gold{background:var(--gold-tint);color:var(--gold)}
+  .dot.answered{background:var(--brand);border-color:var(--brand)}
+  .badge-pass{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;padding:5px 14px;border-radius:20px;margin-bottom:4px}
+  .badge-pass.ok{background:var(--good-tint);color:var(--good-deep)}
+  .badge-pass.no{background:var(--gold-tint);color:var(--gold)}
+  .review{margin-top:26px}
+  .review h4{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-soft);margin:0 0 12px;font-weight:600}
+  .rev-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 17px;margin-bottom:10px}
+  .rev-q{font-size:15px;font-weight:600;margin:0 0 10px;line-height:1.4;display:flex;gap:9px}
+  .rev-q .rn{font-family:var(--mono);font-size:12px;color:var(--faint);flex:none}
+  .rev-line{font-size:13px;line-height:1.5;padding:9px 12px;border-radius:9px;margin-bottom:6px}
+  .rev-line:last-child{margin-bottom:0}
+  .rev-line.correct{background:var(--good-tint);color:var(--good-deep)}
+  .rev-line.wrong{background:var(--bad-tint);color:var(--bad-deep)}
+  .rev-line .rl2{font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:2px;opacity:.8}
 
   /* ---------- practice view ---------- */
   .study{padding:20px 0 60px;display:none}
@@ -369,17 +396,32 @@ function render_home(){
       const kind=s.type==='read'?'Sample answers':'Practice';
       let chip=s.complete?`<span class="lchip mast">Mastered</span>`:isNext?`<span class="lchip ${s.started?'cont':'start'}">${s.started?'Continue':'Start'}</span>`:s.started?`<span class="lchip rev">Review</span>`:'';
       const node=(s.complete||seenAll)?`<span class="node"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg></span>`:`<span class="node"></span>`;
-      rows+=`<button class="${cls}" onclick="open_module('${l.id}')">${node}
-        <div class="ltext"><div class="lt">${esc(l.title)} <span class="kind">${kind}</span></div><div class="lm mono">${s.count} ${s.type==='read'?'questions':'questions'} · ${s.mastered}/${s.count} mastered</div></div>
-        <span class="lbar"><i style="width:${s.pct}%"></i></span>${chip}</button>`;
+      let qz='';
+      if(s.type==='quiz'){const t=get_test('quiz:'+l.id);
+        qz=t&&t.passed?`<button class="quizbtn passed" title="Lesson quiz — best ${t.best}%" onclick="event.stopPropagation();start_lesson_quiz('${l.id}')"><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>${t.best}%</button>`
+          :`<button class="quizbtn" title="Take the lesson quiz" onclick="event.stopPropagation();start_lesson_quiz('${l.id}')">Quiz</button>`;}
+      rows+=`<div class="${cls}" role="button" tabindex="0" onclick="open_module('${l.id}')">${node}
+        <div class="ltext"><div class="lt">${esc(l.title)} <span class="kind">${kind}</span></div><div class="lm mono">${s.count} questions · ${s.mastered}/${s.count} mastered</div></div>
+        <span class="lbar"><i style="width:${s.pct}%"></i></span>${qz}${chip}</div>`;
     });
-    sec.innerHTML=`<div class="unit-head ${uDone?'done':''}"><span class="unit-num mono">${uDone?'✓':(ui+1)}</span><h3>${esc(u.unit)}</h3><span class="up mono">${uMast}/${uTot}</span></div><div class="lessons">${rows}</div>`;
+    const uq=live.filter(l=>LTYPE[l.id]==='quiz');
+    let utNode='';
+    if(uq.length>=1){const t=get_test('test:'+ui),passed=t&&t.passed;
+      const tn=Math.min(15,uq.reduce((a,l)=>a+ITEMS[l.id].length,0));
+      utNode=`<div class="lesson unittest ${passed?'passed':''}" role="button" tabindex="0" onclick="start_unit_test(${ui})">
+        <span class="node"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg></span>
+        <div class="ltext"><div class="lt">${esc(u.unit)} unit test <span class="kind">Test</span></div><div class="lm mono">${tn} questions${t?` · best ${t.best}%`:' · covers the whole unit'}</div></div>
+        <span class="lchip ${passed?'mast':'gold'}">${passed?'Passed':(t?'Retake':'Take test')}</span></div>`;
+    }
+    sec.innerHTML=`<div class="unit-head ${uDone?'done':''}"><span class="unit-num mono">${uDone?'✓':(ui+1)}</span><h3>${esc(u.unit)}</h3><span class="up mono">${uMast}/${uTot}</span></div><div class="lessons">${rows}${utNode}</div>`;
     path.appendChild(sec);
   });
 }
 
 /* ---------- practice engine ---------- */
-let CUR={lesson:null,type:null,set:[],i:0,chosen:null,checked:false,marks:[]};
+let CUR={lesson:null,type:null,set:[],i:0,chosen:null,checked:false,marks:[],mode:'practice',answers:[],storeKey:null,testKind:null,testLesson:null,showResults:false};
+function get_test(k){return STORE[k]||null;}
+function sample(pool,n){const a=pool.slice();shuf(a);return a.slice(0,Math.min(n,a.length));}
 function make_set(id){
   let pool=ITEMS[id].filter(c=>get_state(c.id)<MAX);
   const review=pool.length===0;
@@ -390,6 +432,7 @@ function make_set(id){
 function shuf(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 function open_module(id){
   if(!ITEMS[id]||!ITEMS[id].length)return;
+  CUR.mode='practice';CUR.showResults=false;
   CUR.lesson=id;CUR.type=LTYPE[id];CUR.set=make_set(id);CUR.i=0;CUR.chosen=null;CUR.checked=false;CUR.marks=[];
   STORE.__last=id;save_store();
   document.getElementById('st-eyebrow').textContent=LUNIT[id];
@@ -398,12 +441,21 @@ function open_module(id){
 }
 function render_dots(){
   const host=document.getElementById('st-dots');host.innerHTML='';
-  CUR.set.forEach((_,k)=>{let c='dot';if(k<CUR.marks.length)c+=CUR.marks[k]?' correct':' wrong';if(k===CUR.i&&!CUR.checked||k===CUR.i&&CUR.checked)c+=' current';host.appendChild(el(`<span class="${c}"></span>`));});
+  CUR.set.forEach((_,k)=>{let c='dot';
+    if(CUR.mode==='test'){
+      if(CUR.showResults){const a=CUR.answers[k];c+=(a!=null&&CUR.set[k].choices[a].correct)?' correct':' wrong';}
+      else{if(k<CUR.i)c+=' answered';if(k===CUR.i)c+=' current';}
+    }else{if(k<CUR.marks.length)c+=CUR.marks[k]?' correct':' wrong';if(k===CUR.i)c+=' current';}
+    host.appendChild(el(`<span class="${c}"></span>`));});
   document.getElementById('st-sc').textContent=`${Math.min(CUR.i+1,CUR.set.length)} / ${CUR.set.length}`;
 }
 function render_item(){
   render_dots();
   const area=document.getElementById('q-area');
+  if(CUR.mode==='test'){
+    if(CUR.i>=CUR.set.length){render_test_results();return;}
+    return render_test_q(CUR.set[CUR.i],area);
+  }
   if(CUR.i>=CUR.set.length){render_results();return;}
   const it=CUR.set[CUR.i];
   if(CUR.type==='read')return render_read(it,area);
@@ -423,13 +475,13 @@ function render_quiz(it,area){
     <div id="fb"></div>
     <div class="actionbar" id="actionbar">
       <button class="btn ghost" onclick="skip_q()">Skip</button><span class="spacer"></span>
-      <button class="btn primary" id="checkbtn" disabled onclick="check_q()">Check</button>
+      <button class="btn primary" id="primarybtn" disabled onclick="check_q()">Check</button>
     </div></div>`;
 }
 function pick(idx){
   if(CUR.checked)return;CUR.chosen=idx;
   [...document.querySelectorAll('#choices .choice')].forEach((c,i)=>c.classList.toggle('sel',i===idx));
-  document.getElementById('checkbtn').disabled=false;
+  const b=document.getElementById('primarybtn');if(b)b.disabled=false;
 }
 function check_q(){
   if(CUR.chosen===null||CUR.checked)return;CUR.checked=true;
@@ -448,6 +500,61 @@ function check_q(){
 }
 function skip_q(){ if(CUR.checked)return; CUR.marks[CUR.i]=false; advance(); }
 function advance(){CUR.i++;CUR.chosen=null;CUR.checked=false;render_item();window.scrollTo(0,document.querySelector('.study').offsetTop-70);}
+
+/* ---------- quizzes & unit tests (graded, no per-question feedback) ---------- */
+function begin_test(cfg){
+  CUR.mode='test';CUR.type='quiz';CUR.set=cfg.set;CUR.i=0;CUR.chosen=null;CUR.checked=false;
+  CUR.answers=[];CUR.storeKey=cfg.storeKey;CUR.testKind=cfg.kind;CUR.testLesson=cfg.lesson||null;CUR.showResults=false;CUR.lesson=cfg.lesson||null;
+  document.getElementById('st-eyebrow').textContent=cfg.eyebrow;
+  document.getElementById('st-title').textContent=cfg.title;
+  show_view('study');render_item();window.scrollTo(0,0);
+}
+function start_lesson_quiz(id){ if(LTYPE[id]!=='quiz'||!ITEMS[id].length)return;
+  begin_test({set:sample(ITEMS[id],Math.min(10,ITEMS[id].length)),storeKey:'quiz:'+id,title:LMETA[id].title+' — quiz',eyebrow:LUNIT[id]+' · lesson quiz',kind:'lesson',lesson:id}); }
+function start_unit_test(ui){ const u=COURSE[ui];const pool=[];u.lessons.forEach(l=>{if(LTYPE[l.id]==='quiz')pool.push(...ITEMS[l.id]);});if(!pool.length)return;
+  begin_test({set:sample(pool,Math.min(15,pool.length)),storeKey:'test:'+ui,title:u.unit+' — unit test',eyebrow:'Cumulative unit test',kind:'unit'}); }
+function render_test_q(it,area){
+  const letters=['A','B','C','D','E','F'];
+  const choicesHtml=it.choices.map((ch,idx)=>`<button class="choice" data-i="${idx}" onclick="pick(${idx})"><span class="mk">${letters[idx]}</span><span class="ctext">${esc(ch.t)}</span></button>`).join('');
+  const last=CUR.i>=CUR.set.length-1;
+  area.innerHTML=`<div class="qcard">
+    <div class="qstem">${esc(it.stem)}</div>
+    <div class="qhint">Test mode — pick your answer and move on. You'll see the score and explanations at the end.</div>
+    <div class="choices" id="choices">${choicesHtml}</div>
+    <div class="actionbar" id="actionbar">
+      <button class="btn ghost" onclick="test_skip()">Skip</button><span class="spacer"></span>
+      <button class="btn primary" id="primarybtn" disabled onclick="test_next()">${last?'Submit test':'Next'} <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+    </div></div>`;
+}
+function test_next(){ if(CUR.chosen===null)return; CUR.answers[CUR.i]=CUR.chosen;
+  const it=CUR.set[CUR.i];if(it.choices[CUR.chosen]&&it.choices[CUR.chosen].correct)set_state(it.id,MAX);
+  CUR.i++;CUR.chosen=null;render_item();window.scrollTo(0,document.querySelector('.study').offsetTop-70); }
+function test_skip(){ CUR.answers[CUR.i]=null;CUR.i++;CUR.chosen=null;render_item();window.scrollTo(0,document.querySelector('.study').offsetTop-70); }
+function render_test_results(){
+  CUR.showResults=true;render_dots();
+  const n=CUR.set.length;let correct=0;
+  CUR.set.forEach((it,k)=>{const a=CUR.answers[k];if(a!=null&&it.choices[a].correct)correct++;});
+  const pct=Math.round(100*correct/n),passed=pct>=80;
+  const prev=get_test(CUR.storeKey),best=Math.max(pct,prev?prev.best:0),passedEver=passed||(prev&&prev.passed);
+  STORE[CUR.storeKey]={best,passed:!!passedEver,last:pct,t:Date.now()};save_store();
+  const letters=['A','B','C','D','E','F'];
+  const review=CUR.set.map((it,k)=>{
+    const a=CUR.answers[k],ci=it.choices.findIndex(c=>c.correct),ok=a!=null&&a===ci;
+    let lines=`<div class="rev-line correct"><span class="rl2">Correct answer</span>${letters[ci]}. ${esc(it.choices[ci].t)} — ${esc(it.choices[ci].why||'')}</div>`;
+    if(!ok)lines+=`<div class="rev-line wrong"><span class="rl2">Your answer</span>${a==null?'Skipped':letters[a]+'. '+esc(it.choices[a].t)}</div>`;
+    return `<div class="rev-item"><div class="rev-q"><span class="rn">${k+1}</span><span>${esc(it.stem)}</span></div>${lines}</div>`;
+  }).join('');
+  const retake=CUR.testKind==='lesson'?`start_lesson_quiz('${CUR.testLesson}')`:`start_unit_test(${+CUR.storeKey.slice(5)})`;
+  const btns=`<button class="btn primary" onclick="${retake}"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg> Retake</button><button class="btn" onclick="go_home()">Back to course</button>`;
+  document.getElementById('q-area').innerHTML=`<div class="results">
+    <div class="ring-wrap">${ring(pct,72)}</div>
+    <div><span class="badge-pass ${passed?'ok':'no'}">${passed?'Passed':'Keep practicing'}</span></div>
+    <h3>You scored ${correct} of ${n}</h3>
+    <p>${passed?'Nice — that clears the 80% bar.':'Passing is 80%. Read the review below, then retake.'}${best>pct?` · your best is ${best}%`:''}</p>
+    <div class="row">${btns}</div></div>
+    <div class="review"><h4>Review all ${n} questions</h4>${review}</div>`;
+  window.scrollTo(0,0);
+}
 
 /* reveal mode (behavioral) */
 function render_read(it,area){
@@ -481,6 +588,8 @@ function render_results(){
     if(nextId)btns+=`<button class="btn primary" onclick="open_module('${nextId}')">Next lesson: ${esc(nm.title)} <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>`;}
   else{headline=CUR.type==='read'?"Set reviewed.":`You got ${correct} of ${n}.`;
     btns+=`<button class="btn primary" onclick="open_module('${CUR.lesson}')">Next ${Math.min(SET,left)}-question set <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>`;}
+  if(CUR.type==='quiz'){const tq=get_test('quiz:'+CUR.lesson);
+    btns+=`<button class="btn" onclick="start_lesson_quiz('${CUR.lesson}')"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg> ${tq&&tq.passed?`Retake lesson quiz (best ${tq.best}%)`:'Take the lesson quiz'}</button>`;}
   btns+=`<button class="btn" onclick="go_home()">Back to course</button>`;
   const sub=s.complete?`${s.count} questions, all mastered.`:`${s.mastered} of ${s.count} mastered in this lesson · ${left} to go.`;
   document.getElementById('q-area').innerHTML=`<div class="results">
@@ -515,9 +624,14 @@ function reset_all(){if(confirm('Reset all progress on this device? This cannot 
 document.addEventListener('keydown',e=>{
   if(document.getElementById('study').classList.contains('on')&&CUR.type==='quiz'){
     const it=CUR.set[CUR.i];
-    if(!CUR.checked&&it&&/^[1-9]$/.test(e.key)){const idx=+e.key-1;if(idx<it.choices.length)pick(idx);}
-    else if(!CUR.checked&&(e.key==='Enter')&&CUR.chosen!==null)check_q();
-    else if(CUR.checked&&e.key==='Enter')advance();
+    if(CUR.mode==='test'){
+      if(it&&/^[1-9]$/.test(e.key)){const idx=+e.key-1;if(idx<it.choices.length)pick(idx);}
+      else if(e.key==='Enter'&&CUR.chosen!==null)test_next();
+    }else{
+      if(!CUR.checked&&it&&/^[1-9]$/.test(e.key)){const idx=+e.key-1;if(idx<it.choices.length)pick(idx);}
+      else if(!CUR.checked&&e.key==='Enter'&&CUR.chosen!==null)check_q();
+      else if(CUR.checked&&e.key==='Enter')advance();
+    }
   }
   if(e.key==='Escape')go_home();
 });
