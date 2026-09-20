@@ -378,11 +378,11 @@
     <button class="chat-close" onclick="toggle_chat()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="chat-key-screen" id="chat-key-screen">
-    <h3>Connect your Anthropic API key</h3>
-    <p>Your key is stored only in your browser (localStorage) and sent directly to Anthropic — never to a third party. Each person who uses the site enters their own key.</p>
-    <input type="password" id="chat-key-input" placeholder="sk-ant-…" autocomplete="off"/>
+    <h3>One-time setup</h3>
+    <p>Paste your <strong>Cloudflare Worker URL</strong> below. See <code>worker.js</code> in the repo for the 2-minute setup guide.</p>
+    <input type="url" id="chat-key-input" placeholder="https://your-worker.workers.dev" autocomplete="off"/>
     <button class="ck-save" onclick="save_chat_key()">Save &amp; start chatting</button>
-    <div class="ck-link"><a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">Get a key at console.anthropic.com →</a></div>
+    <div class="ck-link" style="font-size:11px;color:var(--muted)">The Worker holds your Anthropic key — nothing is stored in the browser except this URL.</div>
   </div>
   <div class="chat-msgs" id="chat-msgs" style="display:none"></div>
   <div class="chat-input-row" id="chat-input-row" style="display:none">
@@ -869,7 +869,7 @@ function toggle_chat(){
   }
 }
 
-function get_chat_key(){try{return localStorage.getItem('ib_claude_key')||'';}catch(e){return '';}}
+function get_chat_key(){try{return localStorage.getItem('ib_worker_url')||'';}catch(e){return '';}}
 
 function show_key_screen(){
   document.getElementById('chat-key-screen').style.display='flex';
@@ -880,8 +880,8 @@ function show_key_screen(){
 
 function save_chat_key(){
   var val=document.getElementById('chat-key-input').value.trim();
-  if(!val.startsWith('sk-')){alert('Please enter a valid Anthropic API key (starts with sk-ant-…)');return;}
-  try{localStorage.setItem('ib_claude_key',val);}catch(e){}
+  if(!val.startsWith('http')){alert('Please enter a valid Worker URL (starts with https://…)');return;}
+  try{localStorage.setItem('ib_worker_url',val);}catch(e){}
   show_chat_convo();
 }
 
@@ -942,14 +942,9 @@ async function send_chat(){
     node.appendChild(retryBtn);
   }
   try{
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{
+    var resp=await fetch(key,{
       method:'POST',
-      headers:{
-        'x-api-key':key,
-        'anthropic-version':'2023-06-01',
-        'anthropic-dangerous-allow-browser':'true',
-        'content-type':'application/json'
-      },
+      headers:{'content-type':'application/json'},
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:1024,
