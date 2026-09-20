@@ -869,7 +869,15 @@ function toggle_chat(){
   var panel=document.getElementById('chat-panel');
   panel.classList.toggle('open');
   if(panel.classList.contains('open')){
-    if(get_chat_key()){show_chat_convo();}
+    // Always show chat view if URL is saved; only show setup on very first use
+    var savedUrl=get_chat_key();
+    if(savedUrl){
+      show_chat_convo();
+    } else {
+      // Pre-fill even on first open in case storage came from another tab
+      var ki=document.getElementById('chat-key-input');
+      if(ki&&ki.value)show_chat_convo();
+    }
     setTimeout(function(){
       var inp=document.getElementById('chat-input');
       if(inp&&inp.style.display!=='none')inp.focus();
@@ -1038,11 +1046,13 @@ async function send_chat(){
     if(!resp.ok){
       var err=await resp.json().catch(function(){return {};});
       var msg=(err.error&&err.error.message)?err.error.message:('HTTP '+resp.status);
-      // Invalid key → show key screen
       if(resp.status===401){
-        thinking.parentNode.removeChild(thinking);
+        thinking.textContent='';
+        thinking.className='chat-msg ai';
+        var authErr=document.createElement('span');
+        authErr.textContent='Auth error (401) — the API key in your Cloudflare Worker secret may be wrong or expired. Open Cloudflare → Workers → Settings → Variables & Secrets and re-add ANTHROPIC_API_KEY as a Secret, then redeploy.';
+        thinking.appendChild(authErr);
         CHAT_HISTORY.pop();
-        show_key_screen();
       }else{
         thinking.textContent='';
         thinking.className='chat-msg ai';
