@@ -924,6 +924,23 @@ async function send_chat(){
   var thinking=append_chat_msg('ai','…');
   thinking.className='chat-msg ai thinking';
 
+  var lastText=text;
+  function make_retry(node){
+    node.innerHTML='';
+    var msg=document.createElement('span');
+    msg.textContent='Request failed. ';
+    var retryBtn=document.createElement('button');
+    retryBtn.textContent='Retry';
+    retryBtn.style.cssText='background:var(--brand);color:#fff;border:none;border-radius:6px;padding:2px 9px;font-size:12px;cursor:pointer;margin-left:4px';
+    retryBtn.onclick=function(){
+      node.parentNode.removeChild(node);
+      var inp2=document.getElementById('chat-input');
+      inp2.value=lastText;
+      send_chat();
+    };
+    node.appendChild(msg);
+    node.appendChild(retryBtn);
+  }
   try{
     var resp=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -942,9 +959,21 @@ async function send_chat(){
     });
     if(!resp.ok){
       var err=await resp.json().catch(function(){return {};});
-      thinking.textContent='Error: '+(err.error&&err.error.message?err.error.message:resp.statusText);
-      thinking.className='chat-msg ai';
-      CHAT_HISTORY.pop();
+      var msg=(err.error&&err.error.message)?err.error.message:('HTTP '+resp.status);
+      // Invalid key → show key screen
+      if(resp.status===401){
+        thinking.parentNode.removeChild(thinking);
+        CHAT_HISTORY.pop();
+        show_key_screen();
+      }else{
+        thinking.textContent='';
+        thinking.className='chat-msg ai';
+        var span=document.createElement('span');
+        span.textContent=msg+' ';
+        thinking.appendChild(span);
+        if(resp.status===429||resp.status>=500){make_retry(thinking);}
+        CHAT_HISTORY.pop();
+      }
     }else{
       var data=await resp.json();
       var reply=(data.content&&data.content[0]&&data.content[0].text)||'(no response)';
@@ -953,8 +982,8 @@ async function send_chat(){
       CHAT_HISTORY.push({role:'assistant',content:reply});
     }
   }catch(e){
-    thinking.textContent='Network error — check your connection and try again.';
     thinking.className='chat-msg ai';
+    make_retry(thinking);
     CHAT_HISTORY.pop();
   }
   btn.disabled=false;
