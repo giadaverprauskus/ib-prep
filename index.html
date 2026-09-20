@@ -871,7 +871,12 @@ function toggle_chat(){
   }
 }
 
-function get_chat_key(){try{return localStorage.getItem('ib_worker_url')||'';}catch(e){return '';}}
+function get_chat_key(){
+  try{
+    var v=localStorage.getItem('ib_worker_url')||sessionStorage.getItem('ib_worker_url')||'';
+    return v;
+  }catch(e){return '';}
+}
 
 function clear_chat(){
   CHAT_HISTORY=[];
@@ -881,16 +886,21 @@ function clear_chat(){
 }
 
 function show_key_screen(){
+  // Pre-fill with saved URL so user doesn't have to retype
+  var saved=get_chat_key();
+  if(saved)document.getElementById('chat-key-input').value=saved;
   document.getElementById('chat-key-screen').style.display='flex';
   document.getElementById('chat-msgs').style.display='none';
   document.getElementById('chat-input-row').style.display='none';
   document.getElementById('chat-key-btn').style.display='none';
+  document.getElementById('chat-clear-btn').style.display='none';
 }
 
 function save_chat_key(){
   var val=document.getElementById('chat-key-input').value.trim();
   if(!val.startsWith('http')){alert('Please enter a valid Worker URL (starts with https://…)');return;}
   try{localStorage.setItem('ib_worker_url',val);}catch(e){}
+  try{sessionStorage.setItem('ib_worker_url',val);}catch(e){}
   show_chat_convo();
 }
 
@@ -932,7 +942,10 @@ async function send_chat(){
   var text=inp.value.trim();
   if(!text||btn.disabled)return;
   var key=get_chat_key();
-  if(!key){show_key_screen();return;}
+  if(!key){
+    append_chat_msg('ai','Worker URL not set — click "change key" in the header to add it.');
+    return;
+  }
 
   inp.value='';inp.style.height='';
   btn.disabled=true;
