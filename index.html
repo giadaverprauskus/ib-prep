@@ -375,6 +375,7 @@
     <div class="chat-dot"></div>
     <div class="chat-title">Ask Claude</div>
     <button class="chat-key-btn" id="chat-key-btn" onclick="show_key_screen()" style="display:none">change key</button>
+    <button class="chat-key-btn" id="chat-clear-btn" onclick="clear_chat()" style="display:none">clear</button>
     <button class="chat-close" onclick="toggle_chat()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="chat-key-screen" id="chat-key-screen">
@@ -854,7 +855,8 @@ render_home();
 
 <script>
 // Claude chat widget
-var CHAT_HISTORY=[];
+var CHAT_HISTORY=(function(){try{return JSON.parse(localStorage.getItem('ib_chat_history'))||[];}catch(e){return [];}})();
+function save_chat_history(){try{localStorage.setItem('ib_chat_history',JSON.stringify(CHAT_HISTORY.slice(-40)));}catch(e){}}
 var CHAT_SYSTEM='You are an expert investment banking interview coach embedded in IB Interview Academy, a self-study prep tool covering finance fundamentals, DCF, LBO, M&A, comparable company analysis, and behavioural questions. Help the user understand, practise, and master IB interview topics. Be concise and direct. For technical questions, frame answers as an interviewer would evaluate them — lead with the headline answer, then explain the reasoning. For behavioural questions, suggest a tight STAR structure. Do not fabricate facts or figures.';
 
 function toggle_chat(){
@@ -870,6 +872,13 @@ function toggle_chat(){
 }
 
 function get_chat_key(){try{return localStorage.getItem('ib_worker_url')||'';}catch(e){return '';}}
+
+function clear_chat(){
+  CHAT_HISTORY=[];
+  save_chat_history();
+  document.getElementById('chat-msgs').innerHTML='';
+  append_chat_msg('ai','Hi! Ask me anything about investment banking — finance concepts, DCF, LBO, M&A, behavioural questions, or anything from the course.');
+}
 
 function show_key_screen(){
   document.getElementById('chat-key-screen').style.display='flex';
@@ -890,9 +899,17 @@ function show_chat_convo(){
   document.getElementById('chat-msgs').style.display='flex';
   document.getElementById('chat-input-row').style.display='flex';
   document.getElementById('chat-key-btn').style.display='block';
-  if(CHAT_HISTORY.length===0){
-    append_chat_msg('ai','Hi! Ask me anything about investment banking — finance concepts, DCF, LBO, M&A, behavioural questions, or anything from the course.');
+  document.getElementById('chat-clear-btn').style.display='block';
+  var msgs=document.getElementById('chat-msgs');
+  if(msgs.childElementCount===0){
+    if(CHAT_HISTORY.length===0){
+      append_chat_msg('ai','Hi! Ask me anything about investment banking — finance concepts, DCF, LBO, M&A, behavioural questions, or anything from the course.');
+    }else{
+      // Restore previous conversation
+      CHAT_HISTORY.forEach(function(m){append_chat_msg(m.role==='user'?'user':'ai',typeof m.content==='string'?m.content:m.content[0].text);});
+    }
   }
+  msgs.scrollTop=msgs.scrollHeight;
 }
 
 function append_chat_msg(role,text){
@@ -975,6 +992,7 @@ async function send_chat(){
       thinking.textContent=reply;
       thinking.className='chat-msg ai';
       CHAT_HISTORY.push({role:'assistant',content:reply});
+      save_chat_history();
     }
   }catch(e){
     console.error('Claude fetch error:',e);
