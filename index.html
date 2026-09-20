@@ -277,6 +277,11 @@
     .intro h1{font-size:24px} .upnext h2{font-size:19px}
     .qcard{padding:20px 18px} .qstem{font-size:16.5px} .lbar{display:none}
   }
+  /* Selection explain bubble */
+  .sel-bubble{position:fixed;z-index:300;display:flex;align-items:center;gap:6px;background:var(--ink);color:var(--paper);padding:7px 13px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg);white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(6px);transition:.15s;user-select:none}
+  .sel-bubble.show{opacity:1;pointer-events:all;transform:translateY(0)}
+  .sel-bubble svg{width:14px;height:14px;stroke:currentColor;stroke-width:2.2;fill:none;flex:none}
+  .sel-bubble:hover{background:var(--brand)}
   /* Claude chat widget */
   .chat-fab{position:fixed;bottom:22px;right:22px;z-index:200;width:52px;height:52px;border-radius:50%;background:var(--brand);border:none;color:#fff;display:grid;place-items:center;box-shadow:var(--shadow-lg);transition:.2s;cursor:pointer}
   .chat-fab:hover{transform:scale(1.08);background:var(--brand-deep)}
@@ -955,6 +960,68 @@ async function send_chat(){
   btn.disabled=false;
   document.getElementById('chat-msgs').scrollTop=99999;
 }
+
+// Selection → explain bubble
+(function(){
+  var bub=document.createElement('div');
+  bub.className='sel-bubble';
+  bub.id='sel-bubble';
+  bub.innerHTML='<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Explain this';
+  document.body.appendChild(bub);
+
+  var hideTimer=null;
+  function hide_bubble(){bub.classList.remove('show');}
+
+  document.addEventListener('mouseup',function(e){
+    // Don't trigger inside the chat panel itself
+    var t=e.target;
+    if(t&&t.closest&&(t.closest('#chat-panel')||t.closest('#chat-fab')||t.closest('#sel-bubble')))return;
+    clearTimeout(hideTimer);
+    setTimeout(function(){
+      var sel=window.getSelection();
+      var txt=sel&&sel.toString().trim();
+      if(!txt||txt.length<8){hide_bubble();return;}
+      try{
+        var range=sel.getRangeAt(0);
+        var rect=range.getBoundingClientRect();
+        if(!rect||rect.width===0){hide_bubble();return;}
+        var bw=bub.offsetWidth||180;
+        var left=rect.left+rect.width/2-bw/2;
+        left=Math.max(10,Math.min(left,window.innerWidth-bw-10));
+        var top=rect.top-44+window.scrollY;
+        if(top<window.scrollY+8)top=rect.bottom+8+window.scrollY;
+        bub.style.left=left+'px';
+        bub.style.top=top+'px';
+        bub.classList.add('show');
+      }catch(err){hide_bubble();}
+    },10);
+  });
+
+  bub.addEventListener('mousedown',function(e){e.preventDefault();});
+  bub.addEventListener('click',function(){
+    var sel=window.getSelection();
+    var txt=sel&&sel.toString().trim();
+    hide_bubble();
+    if(!txt)return;
+    // Open chat and send the explain request
+    var panel=document.getElementById('chat-panel');
+    if(!panel.classList.contains('open'))toggle_chat();
+    setTimeout(function(){
+      if(get_chat_key()){
+        var inp=document.getElementById('chat-input');
+        if(inp){inp.value='Can you explain this? "'+txt+'"';inp.dispatchEvent(new Event('input'));}
+        send_chat();
+      }
+    },150);
+  });
+
+  document.addEventListener('selectionchange',function(){
+    var sel=window.getSelection();
+    if(!sel||!sel.toString().trim()){
+      hideTimer=setTimeout(hide_bubble,120);
+    }
+  });
+})();
 
 document.addEventListener('DOMContentLoaded',function(){
   var ta=document.getElementById('chat-input');
