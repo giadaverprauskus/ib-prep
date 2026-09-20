@@ -985,11 +985,39 @@ function show_chat_convo(){
   msgs.scrollTop=msgs.scrollHeight;
 }
 
+function md_to_html(t){
+  // escape HTML first
+  t=t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // headings
+  t=t.replace(/^### (.+)$/gm,'<strong style="display:block;margin:8px 0 2px">$1</strong>');
+  t=t.replace(/^## (.+)$/gm,'<strong style="display:block;font-size:1.05em;margin:10px 0 3px">$1</strong>');
+  t=t.replace(/^# (.+)$/gm,'<strong style="display:block;font-size:1.1em;margin:10px 0 3px">$1</strong>');
+  // bold & italic
+  t=t.replace(/\*\*\*(.+?)\*\*\*/g,'<strong><em>$1</em></strong>');
+  t=t.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  t=t.replace(/\*(.+?)\*/g,'<em>$1</em>');
+  // inline code
+  t=t.replace(/`([^`]+)`/g,'<code style="background:rgba(0,0,0,.08);padding:1px 4px;border-radius:3px;font-size:.9em">$1</code>');
+  // unordered list lines → wrap in ul
+  t=t.replace(/((?:^[-•] .+\n?)+)/gm,function(_,block){
+    var items=block.trim().split('\n').map(function(l){return '<li>'+l.replace(/^[-•] /,'')+' </li>';}).join('');
+    return '<ul style="margin:4px 0 4px 16px;padding:0">'+items+'</ul>';
+  });
+  // numbered list
+  t=t.replace(/((?:^\d+\. .+\n?)+)/gm,function(_,block){
+    var items=block.trim().split('\n').map(function(l){return '<li>'+l.replace(/^\d+\. /,'')+' </li>';}).join('');
+    return '<ol style="margin:4px 0 4px 16px;padding:0">'+items+'</ol>';
+  });
+  // line breaks
+  t=t.replace(/\n/g,'<br>');
+  return t;
+}
 function append_chat_msg(role,text){
   var msgs=document.getElementById('chat-msgs');
   var div=document.createElement('div');
   div.className='chat-msg '+role;
-  div.textContent=text;
+  if(role==='ai'&&text!=='…'){div.innerHTML=md_to_html(text);}
+  else{div.textContent=text;}
   msgs.appendChild(div);
   msgs.scrollTop=msgs.scrollHeight;
   return div;
@@ -1067,7 +1095,7 @@ async function send_chat(){
     }else{
       var data=await resp.json();
       var reply=(data.content&&data.content[0]&&data.content[0].text)||'(no response)';
-      thinking.textContent=reply;
+      thinking.innerHTML=md_to_html(reply);
       thinking.className='chat-msg ai';
       CHAT_HISTORY.push({role:'assistant',content:reply});
       save_chat_history();
