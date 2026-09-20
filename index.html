@@ -969,41 +969,45 @@ async function send_chat(){
   bub.innerHTML='<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Explain this';
   document.body.appendChild(bub);
 
-  var hideTimer=null;
   function hide_bubble(){bub.classList.remove('show');}
 
+  // Hide on any new mousedown that isn't the bubble itself
+  document.addEventListener('mousedown',function(e){
+    if(e.target!==bub&&!bub.contains(e.target))hide_bubble();
+  });
+
   document.addEventListener('mouseup',function(e){
-    // Don't trigger inside the chat panel itself
     var t=e.target;
     if(t&&t.closest&&(t.closest('#chat-panel')||t.closest('#chat-fab')||t.closest('#sel-bubble')))return;
-    clearTimeout(hideTimer);
     setTimeout(function(){
       var sel=window.getSelection();
       var txt=sel&&sel.toString().trim();
-      if(!txt||txt.length<8){hide_bubble();return;}
+      if(!txt||txt.length<10)return;
       try{
         var range=sel.getRangeAt(0);
         var rect=range.getBoundingClientRect();
-        if(!rect||rect.width===0){hide_bubble();return;}
-        var bw=bub.offsetWidth||180;
+        if(!rect||rect.width===0)return;
+        // position:fixed — viewport coords only, no scrollY
+        var bw=bub.offsetWidth||160;
         var left=rect.left+rect.width/2-bw/2;
         left=Math.max(10,Math.min(left,window.innerWidth-bw-10));
-        var top=rect.top-44+window.scrollY;
-        if(top<window.scrollY+8)top=rect.bottom+8+window.scrollY;
+        var top=rect.top-48;
+        if(top<8)top=rect.bottom+8;
         bub.style.left=left+'px';
         bub.style.top=top+'px';
         bub.classList.add('show');
-      }catch(err){hide_bubble();}
+      }catch(err){}
     },10);
   });
 
+  // Keep selection alive while clicking the bubble
   bub.addEventListener('mousedown',function(e){e.preventDefault();});
+
   bub.addEventListener('click',function(){
     var sel=window.getSelection();
     var txt=sel&&sel.toString().trim();
     hide_bubble();
     if(!txt)return;
-    // Open chat and send the explain request
     var panel=document.getElementById('chat-panel');
     if(!panel.classList.contains('open'))toggle_chat();
     setTimeout(function(){
@@ -1013,13 +1017,6 @@ async function send_chat(){
         send_chat();
       }
     },150);
-  });
-
-  document.addEventListener('selectionchange',function(){
-    var sel=window.getSelection();
-    if(!sel||!sel.toString().trim()){
-      hideTimer=setTimeout(hide_bubble,120);
-    }
   });
 })();
 
