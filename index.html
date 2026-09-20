@@ -982,7 +982,12 @@ async function send_chat(){
       CHAT_HISTORY.push({role:'assistant',content:reply});
     }
   }catch(e){
+    console.error('Claude fetch error:',e);
     thinking.className='chat-msg ai';
+    thinking.textContent='';
+    var span=document.createElement('span');
+    span.textContent=(e&&e.message?e.message:'fetch failed')+' ';
+    thinking.appendChild(span);
     make_retry(thinking);
     CHAT_HISTORY.pop();
   }
