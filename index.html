@@ -277,6 +277,7 @@
     .intro h1{font-size:24px} .upnext h2{font-size:19px}
     .qcard{padding:20px 18px} .qstem{font-size:16.5px} .lbar{display:none}
   }
+  #chat-sync-input:focus{border-color:var(--brand)}
   /* Selection explain bubble */
   .sel-bubble{position:fixed;z-index:300;display:flex;align-items:center;gap:6px;background:var(--ink);color:var(--paper);padding:7px 13px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:var(--shadow-lg);white-space:nowrap;opacity:0;pointer-events:none;transform:translateY(6px);transition:.15s;user-select:none}
   .sel-bubble.show{opacity:1;pointer-events:all;transform:translateY(0)}
@@ -374,6 +375,7 @@
   <div class="chat-hd">
     <div class="chat-dot"></div>
     <div class="chat-title">Ask Claude</div>
+    <span id="sync-status" style="font-size:11px;color:var(--muted);flex:1"></span>
     <button class="chat-key-btn" id="chat-key-btn" onclick="show_key_screen()" style="display:none">change key</button>
     <button class="chat-key-btn" id="chat-clear-btn" onclick="clear_chat()" style="display:none">clear</button>
     <button class="chat-close" onclick="toggle_chat()"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -382,8 +384,12 @@
     <h3>One-time setup</h3>
     <p>Paste your <strong>Cloudflare Worker URL</strong> below. See <code>worker.js</code> in the repo for the 2-minute setup guide.</p>
     <input type="url" id="chat-key-input" placeholder="https://your-worker.workers.dev" autocomplete="off"/>
+    <div style="border-top:1px solid var(--line);padding-top:12px;margin-top:2px">
+      <p style="font-size:12px;color:var(--muted);margin:0 0 6px;line-height:1.4"><strong>Sync across devices</strong> — optional. Pick any passphrase; enter the same one on other devices to restore your progress.</p>
+      <input type="password" id="chat-sync-input" placeholder="Sync passphrase (optional)" autocomplete="new-password" style="width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card-2);color:var(--ink);font-size:13px;outline:none;margin-bottom:0"/>
+    </div>
     <button class="ck-save" onclick="save_chat_key()">Save &amp; start chatting</button>
-    <div class="ck-link" style="font-size:11px;color:var(--muted)">The Worker holds your Anthropic key — nothing is stored in the browser except this URL.</div>
+    <div class="ck-link" style="font-size:11px;color:var(--muted)">Worker holds your Anthropic key. Passphrase is hashed before leaving your device.</div>
   </div>
   <div class="chat-msgs" id="chat-msgs" style="display:none"></div>
   <div class="chat-input-row" id="chat-input-row" style="display:none">
@@ -465,7 +471,7 @@ const ALLOW_WRONG=2;  // miss more than this in a set -> redo with fresh questio
 const LS_KEY="ib_academy_v2";
 let STORE=load_store();
 function load_store(){try{return JSON.parse(localStorage.getItem(LS_KEY))||{}}catch(e){return {}}}
-function save_store(){try{localStorage.setItem(LS_KEY,JSON.stringify(STORE))}catch(e){}}
+function save_store(){try{localStorage.setItem(LS_KEY,JSON.stringify(STORE))}catch(e){}if(typeof schedule_sync==='function')schedule_sync();}
 function get_state(id){return (STORE[id]&&STORE[id].s)||0;}   // 0 unseen, 1 missed, 3 mastered
 function set_state(id,s){STORE[id]={s:s,t:Date.now()};save_store();}
 const MAX=3;
@@ -856,7 +862,7 @@ render_home();
 <script>
 // Claude chat widget
 var CHAT_HISTORY=(function(){try{return JSON.parse(localStorage.getItem('ib_chat_history'))||[];}catch(e){return [];}})();
-function save_chat_history(){try{localStorage.setItem('ib_chat_history',JSON.stringify(CHAT_HISTORY.slice(-40)));}catch(e){}}
+function save_chat_history(){try{localStorage.setItem('ib_chat_history',JSON.stringify(CHAT_HISTORY.slice(-40)));}catch(e){}if(typeof schedule_sync==='function')schedule_sync();}
 var CHAT_SYSTEM='You are an expert investment banking interview coach embedded in IB Interview Academy, a self-study prep tool covering finance fundamentals, DCF, LBO, M&A, comparable company analysis, and behavioural questions. Help the user understand, practise, and master IB interview topics. Be concise and direct. For technical questions, frame answers as an interviewer would evaluate them — lead with the headline answer, then explain the reasoning. For behavioural questions, suggest a tight STAR structure. Do not fabricate facts or figures.';
 
 function toggle_chat(){
@@ -872,10 +878,46 @@ function toggle_chat(){
 }
 
 function get_chat_key(){
+  try{return localStorage.getItem('ib_worker_url')||sessionStorage.getItem('ib_worker_url')||'';}
+  catch(e){return '';}
+}
+function get_sync_hash(){
+  try{return localStorage.getItem('ib_sync_hash')||sessionStorage.getItem('ib_sync_hash')||'';}
+  catch(e){return '';}
+}
+async function hash_passphrase(pass){
   try{
-    var v=localStorage.getItem('ib_worker_url')||sessionStorage.getItem('ib_worker_url')||'';
-    return v;
-  }catch(e){return '';}
+    var buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pass));
+    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+  }catch(e){return null;}
+}
+function sync_status_msg(msg){var el=document.getElementById('sync-status');if(el)el.textContent=msg;}
+var _sync_timer=null;
+function schedule_sync(){clearTimeout(_sync_timer);_sync_timer=setTimeout(sync_save_now,5000);}
+async function sync_save_now(){
+  var url=get_chat_key(),hash=get_sync_hash();
+  if(!url||!hash)return;
+  sync_status_msg('syncing…');
+  try{
+    var r=await fetch(url+'/sync/save',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({key:hash,data:{store:STORE,chatHistory:CHAT_HISTORY,savedAt:Date.now()}})});
+    sync_status_msg(r.ok?'synced ✓':'sync error');
+    setTimeout(function(){sync_status_msg('');},3000);
+  }catch(e){sync_status_msg('sync error');}
+}
+async function sync_load(){
+  var url=get_chat_key(),hash=get_sync_hash();
+  if(!url||!hash)return;
+  sync_status_msg('loading…');
+  try{
+    var r=await fetch(url+'/sync/load',{method:'POST',headers:{'content-type':'application/json'},
+      body:JSON.stringify({key:hash})});
+    var data=await r.json();
+    if(data&&data.store){STORE=data.store;save_store();render_home();}
+    if(data&&data.chatHistory&&data.chatHistory.length){CHAT_HISTORY=data.chatHistory;save_chat_history();}
+    sync_status_msg('synced ✓');
+    setTimeout(function(){sync_status_msg('');},2000);
+  }catch(e){sync_status_msg('');}
 }
 
 function clear_chat(){
@@ -901,7 +943,18 @@ function save_chat_key(){
   if(!val.startsWith('http')){alert('Please enter a valid Worker URL (starts with https://…)');return;}
   try{localStorage.setItem('ib_worker_url',val);}catch(e){}
   try{sessionStorage.setItem('ib_worker_url',val);}catch(e){}
-  show_chat_convo();
+  var pass=document.getElementById('chat-sync-input').value.trim();
+  if(pass){
+    hash_passphrase(pass).then(function(h){
+      if(!h)return;
+      try{localStorage.setItem('ib_sync_hash',h);}catch(e){}
+      try{sessionStorage.setItem('ib_sync_hash',h);}catch(e){}
+      show_chat_convo();
+      sync_load();
+    });
+  }else{
+    show_chat_convo();
+  }
 }
 
 function show_chat_convo(){
